@@ -64,7 +64,7 @@ def signature_emd_(x, y):
 
 
 @jit(nopython=True, parallel=True)
-def spotdists_pooled_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
+def xcorr_pooled_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
     """Compute the SPOTDist between all M epochs on xcorr pairs of all N channels
     with the pooled activity of the other other channels using all available CPU cores.
     For channel i, the cross correlation is computed between the activity in channel i
@@ -182,7 +182,7 @@ def spotdists_pooled_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
 
 
 @jit(nopython=True, parallel=True)
-def xcorr_distance_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
+def xcorr_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
     """Compute distances between channel cross correlation pairs using all available CPU cores.
     The specific type of distance is provided via the parameter 'metric'.
 
@@ -260,7 +260,7 @@ def xcorr_distance_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
 
 
 @jit(nopython=True, parallel=True)
-def spike_distance_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
+def spike_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
     """Compute the given metric directly on spike times of all M epochs with N channels
     using all available CPU cores.
 
@@ -375,7 +375,7 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
     # SPOTDis comparing the pairwise xcorrs of channels
     if metric == 'SPOTD_xcorr':
         if target == 'cpu':
-            distances, percent_nan = xcorr_distance_cpu_(
+            distances, percent_nan = xcorr_spotdis_cpu_(
                 spike_times, ii_spike_times, epoch_index_pairs)
             distances = distances / epoch_length
         elif target == 'slurm':
@@ -386,7 +386,7 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
                         + 'Please contact the authors regarding SLURM support.')
             # TODO: add partition size as optional argument
             #partition_size = keyword_args['partition_size'] if 'partition_size' in keyword_args.keys() else False
-            distances = spotslurm.xcorr_distance_slurm_(
+            distances = spotslurm.xcorr_spotdis_slurm_(
                 spike_times, ii_spike_times, slurm_partition_size)
             distances = distances / epoch_length
             # TODO: collect nans
@@ -398,7 +398,7 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
     # SPOTDis comparing the xcorr of a channel with all other channels pooled
     elif metric == 'SPOTD_xcorr_pooled':
         if target == 'cpu':
-            distances, percent_nan = spotdists_pooled_cpu_(
+            distances, percent_nan = xcorr_pooled_spotdis_cpu_(
                 spike_times, ii_spike_times, epoch_index_pairs)
             distances = distances / epoch_length
         else:
@@ -408,7 +408,7 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
     # SPOTDis comparing raw spike trains
     elif metric == 'SPOTD_spikes':
         if target == 'cpu':
-            distances, percent_nan = spike_distance_cpu_(
+            distances, percent_nan = spike_spotdis_cpu_(
                 spike_times, ii_spike_times, epoch_index_pairs)
             distances = distances / epoch_length
         else:
