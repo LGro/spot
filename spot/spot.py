@@ -3,6 +3,7 @@ import numpy as np
 import spot.tools
 import itertools
 
+
 @jit(nopython=True)
 def signature_emd_(x, y):
     """A fast implementation of the EMD on sparse 1D signatures like described in:
@@ -239,7 +240,6 @@ def xcorr_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
                             spike_times[ii_spike_times[e2,c2,0]:ii_spike_times[e2,c2,1]])
 
                     # EMD
-                    #xcorr_distance = xcorr_distance + signature_emd_precise_(xcorr1, xcorr2)
                     if len(xcorr1) >= len(xcorr2):
                         xcorr_distance = xcorr_distance + signature_emd_(xcorr1, xcorr2)
                     else:
@@ -289,7 +289,6 @@ def spike_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
 
     # Initialize distance matrix
     distances = np.full((n_epochs, n_epochs), np.nan)
-    #distance_stds = np.full((n_epochs, n_epochs), np.nan)
 
     nan_count = 0.0
 
@@ -309,7 +308,6 @@ def spike_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
                 channel_spikes_e2 = spike_times[ii_spike_times[e2,c,0]:ii_spike_times[e2,c,1]]
 
                 # EMD
-                #neuron_distances[c] = signature_emd_precise_(channel_spikes_e1, channel_spikes_e2)
                 if len(channel_spikes_e1) >= len(channel_spikes_e2):
                     neuron_distances[c] = signature_emd_(channel_spikes_e1, channel_spikes_e2)
                 else:
@@ -322,9 +320,6 @@ def spike_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
         distances[e1, e2] = np.nanmean(neuron_distances)
         distances[e2, e1] = distances[e1, e2]
 
-        #distance_stds[e1, e2] = np.nanstd(neuron_distances)
-        #distance_stds[e2, e1] = distance_stds[e1, e2]
-
     percent_nan = nan_count / (n_channels*n_epoch_index_pairs)
 
     # Set diagonal to zero
@@ -336,8 +331,8 @@ def spike_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
     return distances, percent_nan
 
 
-def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr', target='cpu', slurm_partition_size=False):
-    """Compute temporal distances based on a variety of metrics, using parallelization as available.
+def distances(spike_times, ii_spike_times, epoch_length=1.0, metric='SPOTD_xcorr'):
+    """Compute temporal distances based on various versions of the SPOTDis, using CPU parallelization.
 
     Parameters
     ----------
@@ -356,10 +351,6 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
             * SPOTD_xcorr_pooled
             * SPOTD_spikes
 
-    target : str
-        At the moment 'cpu' is available, offering a multi-threaded parallel computation of the
-        distances. For metric='SPOTD_xcorr' also the target 'slurm' is available.
-
     Returns
     -------
     distances : numpy.ndarray
@@ -374,46 +365,21 @@ def distances(spike_times, ii_spike_times, epoch_length=1, metric='SPOTD_xcorr',
 
     # SPOTDis comparing the pairwise xcorrs of channels
     if metric == 'SPOTD_xcorr':
-        if target == 'cpu':
-            distances, percent_nan = xcorr_spotdis_cpu_(
-                spike_times, ii_spike_times, epoch_index_pairs)
-            distances = distances / epoch_length
-        elif target == 'slurm':
-            try:
-                import spotslurm
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError('The module spotslurm is needed for this functionality. '
-                        + 'Please contact the authors regarding SLURM support.')
-            # TODO: add partition size as optional argument
-            #partition_size = keyword_args['partition_size'] if 'partition_size' in keyword_args.keys() else False
-            distances = spotslurm.xcorr_spotdis_slurm_(
-                spike_times, ii_spike_times, slurm_partition_size)
-            distances = distances / epoch_length
-            # TODO: collect nans
-            percent_nan = np.nan
-        else:
-             raise NotImplementedError('Target "{}" unavailable for "{}", try "cpu" or "slurm".'.format(
-                target, metric))
+        distances, percent_nan = xcorr_spotdis_cpu_(
+            spike_times, ii_spike_times, epoch_index_pairs)
+        distances = distances / (2*epoch_length)
 
     # SPOTDis comparing the xcorr of a channel with all other channels pooled
     elif metric == 'SPOTD_xcorr_pooled':
-        if target == 'cpu':
-            distances, percent_nan = xcorr_pooled_spotdis_cpu_(
-                spike_times, ii_spike_times, epoch_index_pairs)
-            distances = distances / epoch_length
-        else:
-            raise NotImplementedError('Target "{}" unavailable for "{}", try "cpu".'.format(
-                target, metric))
+        distances, percent_nan = xcorr_pooled_spotdis_cpu_(
+            spike_times, ii_spike_times, epoch_index_pairs)
+        distances = distances / (2*epoch_length)
 
     # SPOTDis comparing raw spike trains
     elif metric == 'SPOTD_spikes':
-        if target == 'cpu':
-            distances, percent_nan = spike_spotdis_cpu_(
-                spike_times, ii_spike_times, epoch_index_pairs)
-            distances = distances / epoch_length
-        else:
-            raise NotImplementedError('Target "{}" unavailable for "{}", try "cpu".'.format(
-                target, metric))
+        distances, percent_nan = spike_spotdis_cpu_(
+            spike_times, ii_spike_times, epoch_index_pairs)
+        distances = distances / epoch_length
 
     # Otherwise, raise exception
     else:
