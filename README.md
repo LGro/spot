@@ -11,6 +11,12 @@ To setup the module, run `python setup.py install`.
 
 A jupyter notebook is available in `notebooks/`, along with a demo dataset, showing an example workflow for the SPOTDisClust method.
 
+### Example step-by-step setup (Anaconda, Linux)
+1) `conda create -n spot python=3`
+1) `./env_setup.sh spot`
+1) `source activate spot`
+1) `python setup.py install`
+
 
 ## Loading data from a MATLAB workspace
 
