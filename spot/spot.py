@@ -221,10 +221,13 @@ def xcorr_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
         e2 = epoch_index_pairs[i,1]
 
         # Compute distances for all xcorr pairs between the two epochs
-        xcorr_distance = 0.0
+        xcorr_distances = np.full(int(n_channels * (n_channels-1) / 2), np.nan)
         n_xcorr_distances = 0
+        i_xcorr_distance = -1
         for c1 in range(n_channels):
             for c2 in range(c1):
+                i_xcorr_distance += 1
+
                 # Only compute the xcorrs and distance in case there is a spike in all relevant channels
                 if ((ii_spike_times[e1,c1,1] - ii_spike_times[e1,c1,0]) > 0
                     and (ii_spike_times[e1,c2,1] - ii_spike_times[e1,c2,0]) > 0
@@ -241,9 +244,9 @@ def xcorr_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
 
                     # EMD
                     if len(xcorr1) >= len(xcorr2):
-                        xcorr_distance = xcorr_distance + signature_emd_(xcorr1, xcorr2)
+                        xcorr_distances[i_xcorr_distance] = signature_emd_(xcorr1, xcorr2)
                     else:
-                        xcorr_distance = xcorr_distance + signature_emd_(xcorr2, xcorr1)
+                        xcorr_distances[i_xcorr_distance] = signature_emd_(xcorr2, xcorr1)
 
                     n_xcorr_distances = n_xcorr_distances + 1
                 else:
@@ -251,8 +254,8 @@ def xcorr_spotdis_cpu_(spike_times, ii_spike_times, epoch_index_pairs):
 
         # Save average xcorr distance
         if n_xcorr_distances > 0:
-            distances[e1, e2] = xcorr_distance / n_xcorr_distances
-            distances[e2, e1] = xcorr_distance / n_xcorr_distances
+            distances[e1, e2] = np.nanmean(xcorr_distances)
+            distances[e2, e1] = distances[e1, e2]
 
     percent_nan = nan_count / ((n_channels*(n_channels-1)/2)*n_epoch_index_pairs)
 
