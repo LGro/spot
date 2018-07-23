@@ -47,7 +47,7 @@ def signature_emd_(x, y):
     r = 0
 
     while q < Q:
-        if w_x < w_y:
+        if w_x <= w_y:
             cost = w_x * abs(x[q] - y[r])
             w_y -= w_x
             w_x = R
