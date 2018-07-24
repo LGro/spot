@@ -20,7 +20,7 @@ A jupyter notebook is available in `notebooks/`, along with a demo dataset, show
 
 ### Windows (Anaconda)
 1) `conda create -n spot python=3`
-1) `source activate spot`
+1) `conda activate spot`
 1) `conda install python=3.6.5`
 1) `conda install -c conda-forge hdbscan=0.8.13=py36_0`
 1) `conda install numba`
